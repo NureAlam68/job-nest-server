@@ -45,6 +45,18 @@ app.get('/jobs/:id', async(req, res) => {
     res.send(result);
 })
 
+app.get("/latest-job", async(req, res) => {
+  const cursor = jobsCollections.find().sort({ _id: -1}).limit(8);
+  const result = await cursor.toArray();
+  res.send(result);
+})
+
+app.post("/jobs", async(req, res) => {
+  const newJob = req.body;
+  const result = await jobsCollections.insertOne(newJob);
+  res.send(result);
+})
+
 
 // job applications apis
 
