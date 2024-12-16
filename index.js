@@ -60,8 +60,11 @@ app.get('/job-applications', async(req, res) => {
     const job = await jobsCollections.findOne(query);
     if(job) {
       application.title = job.title;
+      application.location = job.location;
       application.company = job.company;
-      application.company_logo = job.company_logo
+      application.company_logo = job.company_logo;
+      application.category = job.category;
+      application.applicationDeadline = job.applicationDeadline
     }
   }
 
@@ -72,6 +75,13 @@ app.get('/job-applications', async(req, res) => {
 app.post('/job-applications', async(req, res) => {
   const application = req.body;
   const result = await jobApplicationsCollections.insertOne(application);
+  res.send(result);
+})
+
+app.delete("/job-applications/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await jobApplicationsCollections.deleteOne(query);
   res.send(result);
 })
 
