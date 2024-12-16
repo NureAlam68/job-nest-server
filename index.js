@@ -52,6 +52,20 @@ app.get('/job-applications', async(req, res) => {
   const email = req.query.email;
   const query = { applicant_email: email };
   const result = await jobApplicationsCollections.find(query).toArray();
+
+
+  // not the best way to aggregate data
+  for (const application of result) {
+    const query = { _id: new ObjectId(application.job_id)};
+    const job = await jobsCollections.findOne(query);
+    if(job) {
+      application.title = job.title;
+      application.company = job.company;
+      application.company_logo = job.company_logo
+    }
+  }
+
+
   res.send(result);
 })
 
