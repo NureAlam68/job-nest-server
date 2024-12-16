@@ -26,9 +26,12 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-// jobs related apis
-const jobsCollections = client.db('jobNest').collection('jobs');
 
+const jobsCollections = client.db('jobNest').collection('jobs');
+const jobApplicationsCollections = client.db('jobNest').collection('jobApplications')
+
+
+// jobs related apis
 app.get('/jobs', async(req, res) => {
     const cursor = jobsCollections.find();
     const result = await cursor.toArray();
@@ -43,6 +46,20 @@ app.get('/jobs/:id', async(req, res) => {
 })
 
 
+// job applications apis
+
+app.get('/job-applications', async(req, res) => {
+  const email = req.query.email;
+  const query = { applicant_email: email };
+  const result = await jobApplicationsCollections.find(query).toArray();
+  res.send(result);
+})
+
+app.post('/job-applications', async(req, res) => {
+  const application = req.body;
+  const result = await jobApplicationsCollections.insertOne(application);
+  res.send(result);
+})
 
 
 
