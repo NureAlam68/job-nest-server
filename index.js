@@ -2,11 +2,19 @@ require("dotenv").config();
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const port = process.env.PORT || 3000;
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.8kdu5.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -29,6 +37,20 @@ async function run() {
       .db("jobNest")
       .collection("jobApplications");
 
+    // Auth related apis (jwt)
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1d",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: false,
+        })
+        .send({ success: true });
+    });
+
     // jobs related apis
     app.get("/jobs", async (req, res) => {
       const email = req.query.email;
@@ -39,8 +61,8 @@ async function run() {
         query = { hr_email: email };
       }
 
-      if(category) {
-        query = { category: category}
+      if (category) {
+        query = { category: category };
       }
 
       const cursor = jobsCollections.find(query);
@@ -72,6 +94,9 @@ async function run() {
     app.get("/job-applications", async (req, res) => {
       const email = req.query.email;
       const query = { applicant_email: email };
+
+      console.log("cok cok", req.cookies);
+
       const result = await jobApplicationsCollections.find(query).toArray();
 
       // not the best way to aggregate data
@@ -126,18 +151,21 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/job-applications/:id", async(req, res) => {
+    app.patch("/job-applications/:id", async (req, res) => {
       const id = req.params.id;
       const data = req.body;
-      const filter = { _id: new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
         $set: {
-          status: data.status
-        }
-      }
-      const result = await jobApplicationsCollections.updateOne(filter, updatedDoc);
+          status: data.status,
+        },
+      };
+      const result = await jobApplicationsCollections.updateOne(
+        filter,
+        updatedDoc
+      );
       res.send(result);
-    })
+    });
 
     app.delete("/job-applications/:id", async (req, res) => {
       const id = req.params.id;
