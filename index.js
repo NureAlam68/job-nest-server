@@ -32,9 +32,15 @@ async function run() {
     // jobs related apis
     app.get("/jobs", async (req, res) => {
       const email = req.query.email;
+      const category = req.query.category;
       let query = {};
+
       if (email) {
         query = { hr_email: email };
+      }
+
+      if(category) {
+        query = { category: category}
       }
 
       const cursor = jobsCollections.find(query);
