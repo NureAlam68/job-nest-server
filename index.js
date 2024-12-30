@@ -9,7 +9,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173", "https://jobnest-1fa99.web.app", "https://jobnest-1fa99.firebaseapp.com"],
     credentials: true,
   })
 );
@@ -46,7 +46,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const jobsCollections = client.db("jobNest").collection("jobs");
     const jobApplicationsCollections = client
@@ -64,7 +64,8 @@ async function run() {
 
         .cookie("token", token, {
           httpOnly: true,
-          secure: false,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
         })
         .send({ success: true });
     });
@@ -73,7 +74,8 @@ async function run() {
       res
         .clearCookie("token", {
           httpOnly: true,
-          secure: false,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
         })
         .send({ success: true });
     });
@@ -81,18 +83,35 @@ async function run() {
     // jobs related apis
     app.get("/jobs", async (req, res) => {
       const email = req.query.email;
-      const category = req.query.category;
+      const category = req.query?.category;
+      const sort = req.query?.sort;
+      const search = req.query?.search;
+      const min = req.query?.min;
+      const max = req.query?.max;
       let query = {};
+      let sortQuery = {};
 
-      if (email) {
-        query = { hr_email: email };
+       // Combine filters
+    if (email) query.hr_email = email;
+    if (category) query.category = category;
+    
+      if(sort == "true") {
+        sortQuery = {"salaryRange.min": -1}
       }
 
-      if (category) {
-        query = { category: category };
+      if(search) {
+        query.location = {$regex: search, $options: "i"}
       }
 
-      const cursor = jobsCollections.find(query);
+      if(min && max) {
+        query = {
+          ...query,  // new query added
+          "salaryRange.min": {$gte: parseInt(min)},
+          "salaryRange.max": {$lte: parseInt(max)}
+        }
+      }
+
+      const cursor = jobsCollections.find(query).sort(sortQuery);
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -204,7 +223,7 @@ async function run() {
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
